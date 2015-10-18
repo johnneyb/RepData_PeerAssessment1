@@ -1,0 +1,137 @@
+Title:      Reproducible Research
+=================================
+
+I split this assignment into two parts.
+This is the analysis of the data with the NA values omitted.
+The program name is 'prog_01.Rmd' with corresponding 'prog_01.html' file.
+=========================================================================
+
+There is a second program that produces the analyis for data with the NAs
+replaced by the average for that interval over the two months.
+The program name is 'prog_02.Rmd' with corresponding 'prog_02.html' file.
+
+==========================================================================
+```{r, echo=TRUE}
+    library(dplyr)
+    library(knitr)
+    library(ggplot2)
+```
+Loading and preprocessing the data. Show any code that is needed to.
+Load the data (i.e. read.csv()).
+Process/transform the data (if necessary) into a format suitable for your analysis.
+===================================================================================
+
+The date and time were reformated. An new datetime column was created.
+
+
+```{r}
+    opts_chunk$set(echo = TRUE, results = 'hold')
+    act_01   <-    read.csv("activity.csv", header=TRUE)
+    summary(act_01)
+    head(act_01)
+    NROW(act_01)
+
+    print (sapply(act_01, typeof))
+
+    act_02 <- filter(act_01)  %>% na.omit()
+    NROW(act_02)
+
+    act_03 <- mutate(act_01, interval, na.rm=TRUE, date, steps,
+                     Date_01 = format.Date(date, '%Y-%m-%d'),
+                     Time_01 = paste0(substr(sprintf('%04d', interval), 1,2),                                               ':',
+                                      substr(sprintf('%04d', interval), 3, 4)),
+                     Datetime_01 =    as.POSIXct(paste0(Date_01, Time_01)))
+
+    summary(act_03)
+    head(act_03)
+    NROW(act_03)
+    print (sapply(act_03, typeof))
+    
+    act_04 <- aggregate(steps ~ date, act_03, sum)
+    
+    colnames(act_04) <- c("Date","Steps")
+
+    head(act_04)
+    NROW(act_04)
+```
+
+What is the mean total number of steps taken per day?
+
+For this part of the assignment, you can ignore the missing values in the dataset.
+
+Calculate the total number of steps taken per day.
+
+Here is a breakdown of the number of steps per day.
+===================================================
+Each day has 24 x 12 five minute intervals = 288.
+There are 61 days from 1st October to 30 Nomember.
+NA values are excluded.
+===================================================
+
+```{r}
+    kable(act_04)
+```
+Take the column "steps" from the "act_04" dataset and make a histogram of it.
+=============================================================================
+
+Comments:
+=========
+
+The histogram suggests a Gaussian distribution with a possible positive skew.
+The intervals with zero steps (during sleep) may need to be ommitted so that the 
+data reflects true activity during the day-time.
+
+The mean and median are pracically identical.
+
+
+```{r}
+    paddy_01 <- ggplot(data=act_04, aes(act_04$Steps)) + 
+                geom_histogram(breaks=seq(0, 21000, by = 1000), 
+                 col="red", 
+                 fill="green", 
+                 alpha = 1) + 
+  labs(title="Histogram for Steps") +
+  labs(x="Steps", y="Count") + 
+  xlim(c(0,21000)) + 
+  ylim(c(0, 11))
+    
+    paddy_01 + theme(axis.text.x = element_text(face="bold", color="#993333", 
+                           size=14, angle=45),
+                     axis.text.y = element_text(face="bold", color="#993333", 
+                           size=14, angle=45))
+
+    round(mean(act_04$Steps) )
+    median(act_04$Steps)
+    
+```
+What is the average daily activity pattern?
+
+Make a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)
+
+Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+
+Comments:
+=========
+
+The data seems to make sense. People go to bed from 10pm onwards.
+Most people sleep between 12 midnight and 5am.
+People start getting up from 5am onwards and possibly walk to work.
+The data suggests a sedentary group of workers. There is a spike about lunch time.
+People leave work at different times or are involved in different activities in the evening.
+========================================================================================
+```{r}
+    act_05 <- aggregate(steps ~ interval, act_03, sum)
+    head(act_05)
+    NROW(act_05)
+
+    paddy_02 <- ggplot(act_05, aes(interval, steps)) + geom_line() +
+                xlab("") + ylab("Average steps in 5 minute intervals")
+    
+    paddy_02
+    
+    act_06 <- filter(act_05, steps, interval, steps == max(steps))
+    head(act_06)
+    NROW(act_06)
+```
+
+The end of the world is nigh...........!!!!!!!!!!!!!!!!!!!

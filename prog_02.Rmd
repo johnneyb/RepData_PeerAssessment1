@@ -1,0 +1,128 @@
+Title:      Reproducible Research
+=================================
+I split this assignment into two parts.
+
+This (second) program produces the analyis for data with the NAs
+replaced by the average for that interval over the two months.
+The program name is 'prog_02.Rmd' with corresponding 'prog_02.html' file.
+
+The first program produces the analysis of the data with the NA values omitted.
+The program name is 'prog_01.Rmd' with corresponding 'prog_01.html' file.
+=========================================================================
+
+```{r, echo=TRUE}
+    library(dplyr)
+    library(knitr)
+    library(ggplot2)
+
+    act_01   <-    read.csv("activity.csv", header=TRUE)
+    summary(act_01)
+    head(act_01)
+    NROW(act_01)
+    tail(act_01, n= 5, addrownums)
+```
+Imputing missing values
+
+Note that there are a number of days/intervals where there are missing values (coded as NA). The presence of missing days may introduce bias into some calculations or summaries of the data.
+
+Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with NAs)
+
+Devise a strategy for filling in all of the missing values in the dataset. The strategy does not need to be sophisticated. For example, you could use the mean/median for that day, or the mean for that 5-minute interval, etc.
+
+Create a new dataset that is equal to the original dataset but with the missing data filled in.
+
+Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day. Do these values differ from the estimates from the first part of the assignment? What is the impact of imputing missing data on the estimates of the total daily number of steps?
+
+Comments:
+I replaced all the missing values with the average for that particular interval.
+
+The means or for both sets of data are the same with a slightly higher median.
+There is a small but insignificant difference in the histograms.
+================================================================================
+
+
+================================================================================
+
+```{r}
+    missing_steps <- filter(act_01, is.na(steps)==TRUE)
+    summary(missing_steps)
+    NROW(missing_steps)
+    head(missing_steps)
+    tail(missing_steps)
+
+
+    averages <- aggregate(x =list(steps=act_01$steps),
+                          by=list(interval=act_01$interval),
+                          FUN=mean, na.rm=TRUE)
+
+    fill.value <- function(steps, interval) {
+    filled <- NA
+    if (!is.na(steps))
+        filled <- c(steps)
+    else
+        filled <- round(averages[averages$interval==interval, "steps"])
+    return(filled)
+}
+    act_02 <- act_01
+    act_02$steps <- mapply(fill.value, act_02$steps, act_02$interval)
+    summary(act_02)
+    head(act_02)
+    NROW(act_02)
+    tail(act_02, n= 50, addrownums) 
+    
+    act_03 <- aggregate(steps ~ date, act_02, sum)
+    
+    colnames(act_03) <- c("date","steps")
+
+    head(act_03)
+    NROW(act_03)
+    
+    paddy_01 <- ggplot(data=act_03, aes(act_03$steps)) + 
+                geom_histogram(breaks=seq(0, 21000, by = 1000), 
+                 col="Blue", 
+                 fill="Yellow", 
+                 alpha = 1) + 
+  labs(title="Histogram for Steps (NA replaced with the average for that interval") +
+  labs(x="Steps", y="Count") + 
+  xlim(c(0,21000)) + 
+  ylim(c(0, 11))
+    
+    paddy_01 + theme(axis.text.x = element_text(face="bold", color="#993333", 
+                           size=14, angle=45),
+                     axis.text.y = element_text(face="bold", color="#993333", 
+                           size=14, angle=45))
+    round(mean(act_03$steps) )
+    median(act_03$steps)
+```
+Comments:
+There is a marked difference between the weekday and weekend activity.
+The weekday data matched the rythym of a workday activity.
+The weekend activity shows more spread out over the whole day.
+======================================================================
+```{r}
+## ------------------------------------------------------------------------
+weekday.or.weekend <- function(date) {
+    day <- weekdays(date)
+    if (day %in% c("Monday",
+                   "Tuesday",
+                   "Wednesday",
+                   "Thursday",
+                   "Friday"))
+            return("weekday")
+    
+    else if (day %in% c("Saturday",
+                        "Sunday"))
+        return("weekend")
+    else
+        stop("invalid date")
+}
+act_02$date <- as.Date(act_02$date)
+act_02$day  <- sapply (act_02$date, FUN=weekday.or.weekend)
+
+
+## ------------------------------------------------------------------------
+averages <- aggregate(steps ~ interval + day, data=act_02, mean)
+ggplot(averages, aes(interval, steps)) + geom_line() + facet_grid(day ~ .) +
+    xlab("5-minute interval") + ylab("Number of steps")
+```
+The end of the world is nigh...........!!!!!!!!!!!!!!!!!!!
